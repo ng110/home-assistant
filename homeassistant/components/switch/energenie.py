@@ -4,21 +4,57 @@ Demo platform that has two fake switches.
 For more details about this platform, please refer to the documentation
 https://home-assistant.io/components/demo/
 """
-from homeassistant.components.switch import SwitchDevice
+from homeassistant.components.switch import SwitchDevice, PLATFORM_SCHEMA
 from homeassistant.const import DEVICE_DEFAULT_NAME
+from homeassistant.const import CONF_HOST, CONF_USERNAME, CONF_PASSWORD, CONF_API_KEY
+import homeassistant.helpers.config_validation as cv
+import logging
+import voluptuous as vol
+
+# REQUIREMENTS = ['awesome_lights==1.2.3']
+
+_LOGGER = logging.getLogger(__name__)
+
+# Validation of the user's configuration
+PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
+    vol.Required(CONF_HOST): cv.string,
+    vol.Required(CONF_USERNAME): cv.string,
+    vol.Optional(CONF_PASSWORD): cv.string,
+    vol.Optional(CONF_API_KEY): cv.string,
+})
 
 
 # pylint: disable=unused-argument
 def setup_platform(hass, config, add_devices_callback, discovery_info=None):
     """Set up the demo switches."""
+    from pymihome import Connection, EnergenieSwitch
+    username = config.get(CONF_USERNAME)
+    password = config.get(CONF_PASSWORD)
+    key = config.get(CONF_API_KEY)
+    try:
+        mihome = pymihome.Connection(username, key, _LOGGER)
+    except:
+        mihome = pymihome.Connection(username, password, _LOGGER)
+
+    # Verify that passed in configuration works
+    if not mihome.is_valid_login():
+        _LOGGER.error("Could not connect to MiHome Gateway")
+        return False
+
+    # Add devices
+    add_devices(EnergenieSwitch(mihome, dev) for dev in mihome.devices())
+    add_devices(EnergenieSensor(mihome, dev) for dev in mihome.devices())
+
+
+
     add_devices_callback([
         DemoSwitch('Decorative Lights', True, None, True),
         DemoSwitch('AC', False, 'mdi:air-conditioner', False)
     ])
 
 
-class DemoSwitch(SwitchDevice):
-    """Representation of a demo switch."""
+class EnergenieSwitch(SwitchDevice):
+    """Representation of an energenie switch."""
 
     def __init__(self, name, state, icon, assumed):
         """Initialize the Demo switch."""
