@@ -25,47 +25,48 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
 
 
 # pylint: disable=unused-argument
-def setup_platform(hass, config, add_devices_callback, discovery_info=None):
+def setup_platform(hass, config, add_devices_cb, discovery_info=None):
     """Set up the demo switches."""
-    from pymihome import Connection, EnergenieSwitch
+    import pymihome as pymi
     username = config.get(CONF_USERNAME)
     password = config.get(CONF_PASSWORD)
     key = config.get(CONF_API_KEY)
     try:
-        mihome = pymihome.Connection(username, key, _LOGGER)
+        mihome = pymi.Connection(username, key, _LOGGER)
     except:
-        mihome = pymihome.Connection(username, password, _LOGGER)
+        mihome = pymi.Connection(username, password, _LOGGER)
 
     # Verify that passed in configuration works
     if not mihome.is_valid_login():
-        _LOGGER.error("Could not connect to MiHome Gateway")
+        _LOGGER.error("Could not connect to MiHome Gateway.")
         return False
 
     # Add devices
-    add_devices(EnergenieSwitch(mihome, dev) for dev in mihome.devices())
-    add_devices(EnergenieSensor(mihome, dev) for dev in mihome.devices())
-
-
-
-    add_devices_callback([
-        DemoSwitch('Decorative Lights', True, None, True),
-        DemoSwitch('AC', False, 'mdi:air-conditioner', False)
-    ])
+    icon = None
+    add_devices_cb(EnergenieSwitch(pymi.EnergenieSwitch(mihome, dev), icon)
+                         for dev in mihome.devices()
+                         if dev['is_switch'])
 
 
 class EnergenieSwitch(SwitchDevice):
     """Representation of an energenie switch."""
 
-    def __init__(self, name, state, icon, assumed):
-        """Initialize the Demo switch."""
-        self._name = name or DEVICE_DEFAULT_NAME
-        self._state = state
+    # def __init__(self, name, state, icon, assumed):
+    def __init__(self, device, icon):
+        """Initialize the Energenie switch."""
+        self._device = device
+        self._name = self._device.name or DEVICE_DEFAULT_NAME
         self._icon = icon
-        self._assumed = assumed
+        if self._device.is_sensor:
+            self._assumed = False
+        else:
+            self._assumed = True
 
     @property
     def should_poll(self):
-        """No polling needed for a demo switch."""
+        """Poll only for monitor switch."""
+        if self._device.is_sensor:
+            return True
         return False
 
     @property
@@ -81,13 +82,15 @@ class EnergenieSwitch(SwitchDevice):
     @property
     def assumed_state(self):
         """Return if the state is based on assumptions."""
-        return self._assumed
+        if self._device.is_sensor:
+            return False
+        return True
 
     @property
     def current_power_w(self):
         """Return the current power usage in W."""
         if self._state:
-            return 100
+            self._power
 
     @property
     def today_energy_kwh(self):
