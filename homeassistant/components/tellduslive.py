@@ -7,6 +7,8 @@ https://home-assistant.io/components/tellduslive/
 from datetime import datetime, timedelta
 import logging
 
+import voluptuous as vol
+
 from homeassistant.const import (
     ATTR_BATTERY_LEVEL, DEVICE_DEFAULT_NAME,
     CONF_TOKEN, CONF_HOST,
@@ -18,13 +20,12 @@ from homeassistant.helpers.entity import Entity
 from homeassistant.helpers.event import track_point_in_utc_time
 from homeassistant.util.dt import utcnow
 from homeassistant.util.json import load_json, save_json
-import voluptuous as vol
 
 APPLICATION_NAME = 'Home Assistant'
 
 DOMAIN = 'tellduslive'
 
-REQUIREMENTS = ['tellduslive==0.10.3']
+REQUIREMENTS = ['tellduslive==0.10.4']
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -352,8 +353,7 @@ class TelldusLiveEntity(Entity):
             return None
         elif self.device.battery == BATTERY_OK:
             return 100
-        else:
-            return self.device.battery  # Percentage
+        return self.device.battery  # Percentage
 
     @property
     def _last_updated(self):
