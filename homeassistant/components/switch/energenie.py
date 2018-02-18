@@ -17,7 +17,7 @@ _LOGGER = logging.getLogger(__name__)
 
 # Validation of the user's configuration
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
-    vol.Required(CONF_HOST): cv.string,
+#    vol.Required(CONF_HOST): cv.string,
     vol.Required(CONF_USERNAME): cv.string,
     vol.Optional(CONF_PASSWORD): cv.string,
     vol.Optional(CONF_API_KEY): cv.string,
@@ -37,14 +37,15 @@ def setup_platform(hass, config, add_devices_cb, discovery_info=None):
         mihome = pymi.Connection(username, password, _LOGGER)
 
     # Verify that passed in configuration works
-    if not mihome.is_valid_login():
+    _LOGGER.error("ng testing1.")
+    if not mihome.is_valid_login:
         _LOGGER.error("Could not connect to MiHome Gateway.")
         return False
 
     # Add devices
     icon = None
     add_devices_cb(EnergenieSwitch(pymi.EnergenieSwitch(mihome, dev), icon)
-                         for dev in mihome.devices()
+                         for dev in mihome.subdevices
                          if dev['is_switch'])
 
 
@@ -57,6 +58,7 @@ class EnergenieSwitch(SwitchDevice):
         self._device = device
         self._name = self._device.name or DEVICE_DEFAULT_NAME
         self._icon = icon
+        self._state = False
         if self._device.is_sensor:
             self._assumed = False
         else:
