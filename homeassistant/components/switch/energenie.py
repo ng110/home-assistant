@@ -7,6 +7,7 @@ https://home-assistant.io/components/demo/
 from homeassistant.components.switch import SwitchDevice, PLATFORM_SCHEMA
 from homeassistant.const import DEVICE_DEFAULT_NAME
 from homeassistant.const import CONF_HOST, CONF_USERNAME, CONF_PASSWORD, CONF_API_KEY
+from homeassistant.const import STATE_OFF, STATE_ON
 import homeassistant.helpers.config_validation as cv
 import logging
 import voluptuous as vol
@@ -58,7 +59,7 @@ class EnergenieSwitch(SwitchDevice):
         self._device = device
         self._name = self._device.name or DEVICE_DEFAULT_NAME
         self._icon = icon
-        self._state = False
+        self._state = STATE_OFF
         if self._device.is_sensor:
             self._assumed = False
         else:
@@ -89,13 +90,13 @@ class EnergenieSwitch(SwitchDevice):
     @property
     def assumed_state(self):
         """Return if the state is based on assumptions."""
-        if self._device.is_sensor:
-            return False
-        return True
+        return self._assumed
 
     def update(self):
         """Get the latest state and update the state."""
-        return self._device.getinfo()
+        if not self._device.getinfo():
+            return
+        self._state = self._device.state
 
     @property
     def current_power_w(self):
@@ -108,24 +109,28 @@ class EnergenieSwitch(SwitchDevice):
         return self._device.todays_usage / 1000
 
     @property
+    def state(self):
+        """Return the state of the device."""
+        return self._state
+
+    @property
     def is_on(self):
         """Return true if switch is on."""
-        return self._device.state
-        # try:
-        #     return self._device.state
-        # except:
-        #     return self._state
+        if self._device.is_sensor:
+            return self._device.state
+        else:
+            return self._state == STATE_ON
 
     def turn_on(self, **kwargs):
         """Turn the switch on."""
         self._device.turn_on()
-        self._state = True
+        self._state = STATE_ON
         self.schedule_update_ha_state()
 
     def turn_off(self, **kwargs):
         """Turn the device off."""
         self._device.turn_off()
-        self._state = False
+        self._state = STATE_OFF
         self.schedule_update_ha_state()
 
 
