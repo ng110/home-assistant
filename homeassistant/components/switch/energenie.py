@@ -1,5 +1,4 @@
 """
-Demo platform that has two fake switches.
 
 For more details about this platform, please refer to the documentation
 https://home-assistant.io/components/demo/
@@ -38,7 +37,7 @@ def setup_platform(hass, config, add_devices_cb, discovery_info=None):
         mihome = pymi.Connection(username, password, _LOGGER)
 
     # Verify that passed in configuration works
-    _LOGGER.error("ng testing1.")
+#    _LOGGER.error("ng testing1.")
     if not mihome.is_valid_login:
         _LOGGER.error("Could not connect to MiHome Gateway.")
         return False
@@ -103,10 +102,10 @@ class EnergenieSwitch(SwitchDevice):
         """Return the current power usage in W."""
         return self._device.lastpower
 
-    @property
-    def today_energy_kwh(self):
-        """Return the today total energy usage in kWh."""
-        return self._device.todays_usage / 1000
+#    @property
+#    def today_energy_kwh(self):
+#        """Return the today total energy usage in kWh."""
+#        return self._device.todays_usage / 1000
 
     @property
     def state(self):
