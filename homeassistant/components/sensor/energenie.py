@@ -3,11 +3,12 @@
 For more details about this platform, please refer to the documentation
 https://home-assistant.io/components/demo/
 """
-from homeassistant.components.switch import SwitchDevice, PLATFORM_SCHEMA
+from homeassistant.components.sensor import SensorDevice, PLATFORM_SCHEMA
 from homeassistant.const import DEVICE_DEFAULT_NAME
 #from homeassistant.const import CONF_HOST
 from homeassistant.const import CONF_USERNAME, CONF_PASSWORD, CONF_API_KEY
 from homeassistant.const import STATE_OFF, STATE_ON
+from homeassistant.const import POWER_WATTS
 import homeassistant.helpers.config_validation as cv
 import logging
 import voluptuous as vol
@@ -27,7 +28,7 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
 
 # pylint: disable=unused-argument
 def setup_platform(hass, config, add_devices_cb, discovery_info=None):
-    """Set up the demo switches."""
+    """Set up the energenie sensors."""
     import pymihome as pymi
     username = config.get(CONF_USERNAME)
     password = config.get(CONF_PASSWORD)
@@ -43,33 +44,28 @@ def setup_platform(hass, config, add_devices_cb, discovery_info=None):
         return False
 
     # Add devices
-    icon = 'mdi:power-socket-uk'
-    add_devices_cb(EnergenieSwitch(pymi.EnergenieSwitch(mihome, dev), icon)
+    icon = 'mdi:gauge'
+    add_devices_cb(EnergenieSensor(pymi.EnergenieSensor(mihome, dev), icon)
                    for dev in mihome.subdevices
-                   if dev['is_switch'])
+                   if dev['is_sensor'])
 
 
-class EnergenieSwitch(SwitchDevice):
-    """Representation of an energenie switch."""
+class EnergenieSensor(SensorDevice):
+    """Representation of an energenie sensor."""
 
     # def __init__(self, name, state, icon, assumed):
     def __init__(self, device, icon):
-        """Initialize the Energenie switch."""
+        """Initialize the Energenie sensor."""
         self._device = device
         self._name = self._device.name or DEVICE_DEFAULT_NAME
+        self._unit_of_measurement = POWER_WATTS
         self._icon = icon
-        self._state = STATE_OFF
-        if self._device.is_sensor:
-            self._assumed = False
-        else:
-            self._assumed = True
+#        self._state = ??
 
     @property
     def should_poll(self):
         """Poll only for monitor switch."""
-        if self._device.is_sensor:
-            return True
-        return False
+        return True
 
     @property
     def unique_id(self):
