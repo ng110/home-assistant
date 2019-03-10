@@ -11,10 +11,11 @@ import voluptuous as vol
 
 from homeassistant.core import callback
 from homeassistant.core import DOMAIN as HA_DOMAIN
-from homeassistant.components.climate import (
-    STATE_HEAT, STATE_COOL, STATE_IDLE, STATE_AUTO, ClimateDevice,
+from homeassistant.components.climate import ClimateDevice, PLATFORM_SCHEMA
+from homeassistant.components.climate.const import (
+    STATE_HEAT, STATE_COOL, STATE_IDLE, STATE_AUTO,
     ATTR_OPERATION_MODE, ATTR_AWAY_MODE, SUPPORT_OPERATION_MODE,
-    SUPPORT_AWAY_MODE, SUPPORT_TARGET_TEMPERATURE, PLATFORM_SCHEMA)
+    SUPPORT_AWAY_MODE, SUPPORT_TARGET_TEMPERATURE)
 from homeassistant.const import (
     STATE_ON, STATE_OFF, ATTR_TEMPERATURE, CONF_NAME, ATTR_ENTITY_ID,
     SERVICE_TURN_ON, SERVICE_TURN_OFF, STATE_UNKNOWN, PRECISION_HALVES,
@@ -23,7 +24,7 @@ from homeassistant.helpers import condition
 from homeassistant.helpers.event import (
     async_track_state_change, async_track_time_interval)
 import homeassistant.helpers.config_validation as cv
-from homeassistant.helpers.restore_state import async_get_last_state
+from homeassistant.helpers.restore_state import RestoreEntity
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -96,7 +97,7 @@ async def async_setup_platform(hass, config, async_add_entities,
         precision)])
 
 
-class GenericThermostat(ClimateDevice):
+class GenericThermostat(ClimateDevice, RestoreEntity):
     """Representation of a Generic Thermostat device."""
 
     def __init__(self, hass, name, heater_entity_id, sensor_entity_id,
@@ -155,8 +156,9 @@ class GenericThermostat(ClimateDevice):
 
     async def async_added_to_hass(self):
         """Run when entity about to be added."""
+        await super().async_added_to_hass()
         # Check If we have an old state
-        old_state = await async_get_last_state(self.hass, self.entity_id)
+        old_state = await self.async_get_last_state()
         if old_state is not None:
             # If we have no initial temperature, restore
             if self._target_temp is None:

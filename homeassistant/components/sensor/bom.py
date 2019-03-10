@@ -34,7 +34,8 @@ ATTR_STATION_ID = 'station_id'
 ATTR_STATION_NAME = 'station_name'
 ATTR_ZONE_ID = 'zone_id'
 
-CONF_ATTRIBUTION = "Data provided by the Australian Bureau of Meteorology"
+ATTRIBUTION = "Data provided by the Australian Bureau of Meteorology"
+
 CONF_STATION = 'station'
 CONF_ZONE_ID = 'zone_id'
 CONF_WMO_ID = 'wmo_id'
@@ -119,7 +120,7 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
             _LOGGER.error("Could not get BOM weather station from lat/lon")
             return
 
-    bom_data = BOMCurrentData(hass, station)
+    bom_data = BOMCurrentData(station)
 
     try:
         bom_data.update()
@@ -158,7 +159,7 @@ class BOMCurrentSensor(Entity):
     def device_state_attributes(self):
         """Return the state attributes of the device."""
         attr = {
-            ATTR_ATTRIBUTION: CONF_ATTRIBUTION,
+            ATTR_ATTRIBUTION: ATTRIBUTION,
             ATTR_LAST_UPDATE: self.bom_data.last_updated,
             ATTR_SENSOR_ID: self._condition,
             ATTR_STATION_ID: self.bom_data.latest_data['wmo'],
@@ -181,9 +182,8 @@ class BOMCurrentSensor(Entity):
 class BOMCurrentData:
     """Get data from BOM."""
 
-    def __init__(self, hass, station_id):
+    def __init__(self, station_id):
         """Initialize the data object."""
-        self._hass = hass
         self._zone_id, self._wmo_id = station_id.split('.')
         self._data = None
         self.last_updated = None

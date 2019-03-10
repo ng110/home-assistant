@@ -1,9 +1,4 @@
-"""
-Support for Z-Wave.
-
-For more details about this component, please refer to the documentation at
-https://home-assistant.io/components/zwave/
-"""
+"""Support for Z-Wave."""
 import asyncio
 import copy
 import logging
@@ -42,7 +37,7 @@ from .discovery_schemas import DISCOVERY_SCHEMAS
 from .util import (check_node_schema, check_value_schema, node_name,
                    check_has_unique_id, is_node_parsed)
 
-REQUIREMENTS = ['pydispatcher==2.0.5', 'homeassistant-pyozw==0.1.0']
+REQUIREMENTS = ['pydispatcher==2.0.5', 'homeassistant-pyozw==0.1.2']
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -67,7 +62,7 @@ DEFAULT_CONF_REFRESH_VALUE = False
 DEFAULT_CONF_REFRESH_DELAY = 5
 
 SUPPORTED_PLATFORMS = ['binary_sensor', 'climate', 'cover', 'fan',
-                       'light', 'sensor', 'switch']
+                       'lock', 'light', 'sensor', 'switch']
 
 RENAME_NODE_SCHEMA = vol.Schema({
     vol.Required(const.ATTR_NODE_ID): vol.Coerce(int),
@@ -284,7 +279,7 @@ async def async_setup_entry(hass, config_entry):
 
     options.set_console_output(use_debug)
 
-    if CONF_NETWORK_KEY in config_entry.data:
+    if config_entry.data.get(CONF_NETWORK_KEY):
         options.addOption("NetworkKey", config_entry.data[CONF_NETWORK_KEY])
 
     await hass.async_add_executor_job(options.lock)
@@ -420,7 +415,7 @@ async def async_setup_entry(hass, config_entry):
 
     def remove_node(service):
         """Switch into exclusion mode."""
-        _LOGGER.info("Z-Wwave remove_node have been initialized")
+        _LOGGER.info("Z-Wave remove_node have been initialized")
         network.controller.remove_node()
 
     def cancel_command(service):

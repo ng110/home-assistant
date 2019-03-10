@@ -18,7 +18,7 @@ from homeassistant.helpers import aiohttp_client, config_validation as cv
 from homeassistant.helpers.entity import Entity
 from homeassistant.util import Throttle
 
-REQUIREMENTS = ['pyairvisual==2.0.1']
+REQUIREMENTS = ['pyairvisual==3.0.1']
 _LOGGER = getLogger(__name__)
 
 ATTR_CITY = 'city'
@@ -41,33 +41,39 @@ SENSOR_TYPE_LEVEL = 'air_pollution_level'
 SENSOR_TYPE_AQI = 'air_quality_index'
 SENSOR_TYPE_POLLUTANT = 'main_pollutant'
 SENSORS = [
-    (SENSOR_TYPE_LEVEL, 'Air Pollution Level', 'mdi:scale', None),
-    (SENSOR_TYPE_AQI, 'Air Quality Index', 'mdi:format-list-numbers', 'AQI'),
+    (SENSOR_TYPE_LEVEL, 'Air Pollution Level', 'mdi:gauge', None),
+    (SENSOR_TYPE_AQI, 'Air Quality Index', 'mdi:chart-line', 'AQI'),
     (SENSOR_TYPE_POLLUTANT, 'Main Pollutant', 'mdi:chemical-weapon', None),
 ]
 
 POLLUTANT_LEVEL_MAPPING = [{
     'label': 'Good',
+    'icon': 'mdi:emoticon-excited',
     'minimum': 0,
     'maximum': 50
 }, {
     'label': 'Moderate',
+    'icon': 'mdi:emoticon-happy',
     'minimum': 51,
     'maximum': 100
 }, {
-    'label': 'Unhealthy for sensitive group',
+    'label': 'Unhealthy for sensitive groups',
+    'icon': 'mdi:emoticon-neutral',
     'minimum': 101,
     'maximum': 150
 }, {
     'label': 'Unhealthy',
+    'icon': 'mdi:emoticon-sad',
     'minimum': 151,
     'maximum': 200
 }, {
     'label': 'Very Unhealthy',
+    'icon': 'mdi:emoticon-dead',
     'minimum': 201,
     'maximum': 300
 }, {
     'label': 'Hazardous',
+    'icon': 'mdi:biohazard',
     'minimum': 301,
     'maximum': 10000
 }]
@@ -135,7 +141,7 @@ async def async_setup_platform(
             "Using city, state, and country: %s, %s, %s", city, state, country)
         location_id = ','.join((city, state, country))
         data = AirVisualData(
-            Client(config[CONF_API_KEY], websession),
+            Client(websession, api_key=config[CONF_API_KEY]),
             city=city,
             state=state,
             country=country,
@@ -146,7 +152,7 @@ async def async_setup_platform(
             "Using latitude and longitude: %s, %s", latitude, longitude)
         location_id = ','.join((str(latitude), str(longitude)))
         data = AirVisualData(
-            Client(config[CONF_API_KEY], websession),
+            Client(websession, api_key=config[CONF_API_KEY]),
             latitude=latitude,
             longitude=longitude,
             show_on_map=config[CONF_SHOW_ON_MAP],
@@ -237,6 +243,7 @@ class AirVisualSensor(Entity):
                 if i['minimum'] <= aqi <= i['maximum']
             ]
             self._state = level['label']
+            self._icon = level['icon']
         elif self._type == SENSOR_TYPE_AQI:
             self._state = data['aqi{0}'.format(self._locale)]
         elif self._type == SENSOR_TYPE_POLLUTANT:
@@ -271,11 +278,11 @@ class AirVisualData:
 
         try:
             if self.city and self.state and self.country:
-                resp = await self._client.data.city(
+                resp = await self._client.api.city(
                     self.city, self.state, self.country)
                 self.longitude, self.latitude = resp['location']['coordinates']
             else:
-                resp = await self._client.data.nearest_city(
+                resp = await self._client.api.nearest_city(
                     self.latitude, self.longitude)
 
             _LOGGER.debug("New data retrieved: %s", resp)

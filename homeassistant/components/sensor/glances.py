@@ -11,14 +11,15 @@ import voluptuous as vol
 
 from homeassistant.components.sensor import PLATFORM_SCHEMA
 from homeassistant.const import (
-    CONF_HOST, CONF_NAME, CONF_PORT, CONF_RESOURCES, TEMP_CELSIUS)
+    CONF_HOST, CONF_NAME, CONF_PORT, CONF_USERNAME, CONF_PASSWORD, CONF_SSL,
+    CONF_VERIFY_SSL, CONF_RESOURCES, TEMP_CELSIUS)
 from homeassistant.exceptions import PlatformNotReady
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.entity import Entity
 from homeassistant.util import Throttle
 
-REQUIREMENTS = ['glances_api==0.1.0']
+REQUIREMENTS = ['glances_api==0.2.0']
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -46,6 +47,7 @@ SENSOR_TYPES = {
     'process_total': ['Total', 'Count', 'mdi:memory'],
     'process_thread': ['Thread', 'Count', 'mdi:memory'],
     'process_sleeping': ['Sleeping', 'Count', 'mdi:memory'],
+    'cpu_use_percent': ['CPU used', '%', 'mdi:memory'],
     'cpu_temp': ['CPU Temp', TEMP_CELSIUS, 'mdi:thermometer'],
     'docker_active': ['Containers active', '', 'mdi:docker'],
     'docker_cpu_use': ['Containers CPU used', '%', 'mdi:docker'],
@@ -54,8 +56,12 @@ SENSOR_TYPES = {
 
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
     vol.Required(CONF_HOST, default=DEFAULT_HOST): cv.string,
-    vol.Optional(CONF_NAME, default=DEFAULT_NAME): cv.string,
     vol.Optional(CONF_PORT, default=DEFAULT_PORT): cv.port,
+    vol.Optional(CONF_NAME, default=DEFAULT_NAME): cv.string,
+    vol.Optional(CONF_USERNAME): cv.string,
+    vol.Optional(CONF_PASSWORD): cv.string,
+    vol.Optional(CONF_SSL, default=False): cv.boolean,
+    vol.Optional(CONF_VERIFY_SSL, default=True): cv.boolean,
     vol.Optional(CONF_RESOURCES, default=['disk_use']):
         vol.All(cv.ensure_list, [vol.In(SENSOR_TYPES)]),
     vol.Optional(CONF_VERSION, default=DEFAULT_VERSION): vol.In([2, 3]),
@@ -67,15 +73,20 @@ async def async_setup_platform(
     """Set up the Glances sensors."""
     from glances_api import Glances
 
-    name = config.get(CONF_NAME)
-    host = config.get(CONF_HOST)
-    port = config.get(CONF_PORT)
-    version = config.get(CONF_VERSION)
-    var_conf = config.get(CONF_RESOURCES)
+    name = config[CONF_NAME]
+    host = config[CONF_HOST]
+    port = config[CONF_PORT]
+    version = config[CONF_VERSION]
+    var_conf = config[CONF_RESOURCES]
+    username = config.get(CONF_USERNAME)
+    password = config.get(CONF_PASSWORD)
+    ssl = config[CONF_SSL]
+    verify_ssl = config[CONF_VERIFY_SSL]
 
-    session = async_get_clientsession(hass)
+    session = async_get_clientsession(hass, verify_ssl)
     glances = GlancesData(
-        Glances(hass.loop, session, host=host, port=port, version=version))
+        Glances(hass.loop, session, host=host, port=port, version=version,
+                username=username, password=password, ssl=ssl))
 
     await glances.async_update()
 
@@ -167,10 +178,13 @@ class GlancesSensor(Entity):
                 self._state = value['processcount']['thread']
             elif self.type == 'process_sleeping':
                 self._state = value['processcount']['sleeping']
+            elif self.type == 'cpu_use_percent':
+                self._state = value['quicklook']['cpu']
             elif self.type == 'cpu_temp':
                 for sensor in value['sensors']:
                     if sensor['label'] in ['CPU', "Package id 0",
-                                           "Physical id 0"]:
+                                           "Physical id 0", "cpu-thermal 1",
+                                           "exynos-therm 1", "soc_thermal 1"]:
                         self._state = sensor['value']
             elif self.type == 'docker_active':
                 count = 0

@@ -4,7 +4,7 @@ from unittest import mock
 import voluptuous as vol
 
 from collections import defaultdict
-from homeassistant.components.media_player import (
+from homeassistant.components.media_player.const import (
     DOMAIN, SUPPORT_TURN_ON, SUPPORT_TURN_OFF, SUPPORT_VOLUME_MUTE,
     SUPPORT_VOLUME_SET, SUPPORT_VOLUME_STEP, SUPPORT_SELECT_SOURCE)
 from homeassistant.const import STATE_ON, STATE_OFF
@@ -223,7 +223,7 @@ class TestMonopriceMediaPlayer(unittest.TestCase):
         # Restoring wrong media player to its previous state
         # Nothing should be done
         self.hass.services.call(DOMAIN, SERVICE_RESTORE,
-                                {'entity_id': 'not_existing'},
+                                {'entity_id': 'media.not_existing'},
                                 blocking=True)
         # self.hass.block_till_done()
 
